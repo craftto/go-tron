@@ -1,0 +1,7 @@
+tronctl
+tonctl-docs
+bin
+.idea/
+*.key
+test/
+.vscode/
