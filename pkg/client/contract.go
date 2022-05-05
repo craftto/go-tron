@@ -51,6 +51,7 @@ func (g *GrpcClient) TriggerConstantContract(contractAddress, from, method strin
 
 	return &transaction.Transaction{
 		TransactionHash: common.Bytes2Hex(result.Txid),
+		Transaction:     result,
 		Result:          result.Result,
 	}, nil
 }
@@ -114,6 +115,7 @@ func (g *GrpcClient) triggerContract(ks *keystore.Keystore, ct *core.TriggerSmar
 
 	return &transaction.Transaction{
 		TransactionHash: common.Bytes2Hex(tx.GetTxid()),
+		Transaction:     tx,
 		Result:          result,
 	}, nil
 }

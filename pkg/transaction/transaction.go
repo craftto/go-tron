@@ -9,6 +9,7 @@ import (
 
 type Transaction struct {
 	TransactionHash string
+	Transaction     *api.TransactionExtention
 	Result          *api.Return
 }
 
