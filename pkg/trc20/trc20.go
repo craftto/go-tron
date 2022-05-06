@@ -1,17 +1,15 @@
 package trc20
 
 import (
-	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
-	"unicode/utf8"
 
 	"github.com/craftto/go-tron/pkg/abi"
 	"github.com/craftto/go-tron/pkg/address"
 	"github.com/craftto/go-tron/pkg/client"
 	"github.com/craftto/go-tron/pkg/common"
+	"github.com/craftto/go-tron/pkg/contract"
 	"github.com/craftto/go-tron/pkg/keystore"
 	"github.com/craftto/go-tron/pkg/proto/api"
 	"github.com/craftto/go-tron/pkg/proto/core"
@@ -62,7 +60,7 @@ func (t *TRC20) GetName() (string, error) {
 		return "", err
 	}
 
-	return parseStringProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseString(result.GetConstantResult()[0])
 }
 
 func (t *TRC20) GetSymbol() (string, error) {
@@ -76,7 +74,7 @@ func (t *TRC20) GetSymbol() (string, error) {
 		return "", err
 	}
 
-	return parseStringProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseString(result.GetConstantResult()[0])
 }
 
 func (t *TRC20) GetDecimals() (*big.Int, error) {
@@ -90,7 +88,7 @@ func (t *TRC20) GetDecimals() (*big.Int, error) {
 		return nil, err
 	}
 
-	return parseNumericProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseInt(result.GetConstantResult()[0]), nil
 }
 
 func (t *TRC20) GetTotalSupply() (*big.Int, error) {
@@ -104,7 +102,7 @@ func (t *TRC20) GetTotalSupply() (*big.Int, error) {
 		return nil, err
 	}
 
-	return parseNumericProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseInt(result.GetConstantResult()[0]), nil
 }
 
 func (t *TRC20) GetBalance(addr string) (*big.Int, error) {
@@ -124,7 +122,7 @@ func (t *TRC20) GetBalance(addr string) (*big.Int, error) {
 		return nil, err
 	}
 
-	return parseNumericProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseInt(result.GetConstantResult()[0]), nil
 }
 
 func (t *TRC20) GetAllowance(owner, spender string) (*big.Int, error) {
@@ -149,7 +147,7 @@ func (t *TRC20) GetAllowance(owner, spender string) (*big.Int, error) {
 		return nil, err
 	}
 
-	return parseNumericProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseInt(result.GetConstantResult()[0]), nil
 }
 
 func (t *TRC20) Approve(ks *keystore.Keystore, spender string, amount *big.Int) (*transaction.Transaction, error) {
@@ -250,7 +248,7 @@ func (t *TRC20) CallConstant(method string, params []byte) (string, error) {
 		return "", err
 	}
 
-	return parseStringProperty(common.Bytes2Hex(result.GetConstantResult()[0]))
+	return contract.ParseString(result.GetConstantResult()[0])
 }
 
 func (t *TRC20) callConstant(data []byte) (*api.TransactionExtention, error) {
@@ -308,50 +306,4 @@ func (t *TRC20) call(ks *keystore.Keystore, ct *core.TriggerSmartContract) (*tra
 		TransactionHash: common.Bytes2Hex(tx.GetTxid()),
 		Result:          result,
 	}, nil
-}
-
-func parseStringProperty(data string) (string, error) {
-	if common.Has0xPrefix(data) {
-		data = data[2:]
-	}
-
-	if len(data) > 128 {
-		n, _ := parseNumericProperty(data[64:128])
-		if n != nil {
-			l := n.Uint64()
-			if 2*int(l) <= len(data)-128 {
-				b, err := hex.DecodeString(data[128 : 128+2*l])
-				if err == nil {
-					return string(b), nil
-				}
-			}
-		}
-	} else if len(data) == 64 {
-		// allow string properties as 32 bytes of UTF-8 data
-		b, err := hex.DecodeString(data)
-		if err == nil {
-			i := bytes.Index(b, []byte{0})
-			if i > 0 {
-				b = b[:i]
-			}
-			if utf8.Valid(b) {
-				return string(b), nil
-			}
-		}
-	}
-	return "", fmt.Errorf("Cannot parse %s,", data)
-}
-
-func parseNumericProperty(data string) (*big.Int, error) {
-	if common.Has0xPrefix(data) {
-		data = data[2:]
-	}
-	if len(data) == 64 {
-		var n big.Int
-		_, ok := n.SetString(data, 16)
-		if ok {
-			return &n, nil
-		}
-	}
-	return nil, fmt.Errorf("Cannot parse %s", data)
 }
